@@ -1,6 +1,8 @@
 package master
 
 import (
+	"crotab/project/crontab/master/common"
+	"encoding/json"
 	"net"
 	"net/http"
 	"strconv"
@@ -18,8 +20,39 @@ var (
 )
 
 //保存任务的结构
-func handleJobSave(w http.ResponseWriter, r *http.Request) {
-
+//POST job = {"name:""job1","command":"echo hello","cronExpr:"*******""}
+func handleJobSave(resp http.ResponseWriter, r *http.Request) {
+	var (
+		err     error
+		postJob string
+		job     common.Job
+		oldJob  *common.Job
+		bytes   []byte
+	)
+	//1保存任务到etcd中
+	if err = r.ParseForm(); err != nil {
+		goto ERR
+	}
+	//2读取表单中的job字段
+	postJob = r.PostForm.Get("job")
+	//3反序列化job
+	if err = json.Unmarshal([]byte(postJob), &job); err != nil {
+		goto ERR
+	}
+	//4将反序列化后的job，保存在etcd中，etcd是由jobMannger维护的,所以传给jobMannger
+	if oldJob, err = G_jobMannger.SaveJob(&job); err != nil {
+		goto ERR
+	}
+	//5 无错误，正常应答 {"error":0,"msg":"","data":{....}}
+	if bytes, err = common.BuildResponse(0, "success", oldJob); err == nil {
+		//将old返回
+		resp.Write(bytes)
+	}
+ERR:
+	//6有错误的应答
+	if bytes, err = common.BuildResponse(-1, err.Error(), nil); err == nil {
+		resp.Write(bytes)
+	}
 }
 
 //初始化服务

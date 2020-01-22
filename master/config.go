@@ -7,9 +7,11 @@ import (
 
 //master配置
 type Config struct {
-	ApiPort         int `json:"apiPort"`
-	ApiReadTimeout  int `json:"apiReadTimeout"`
-	ApiWriteTimeout int `json:"apiWriteTimeout"`
+	ApiPort         int      `json:"apiPort"`
+	ApiReadTimeout  int      `json:"apiReadTimeout"`
+	ApiWriteTimeout int      `json:"apiWriteTimeout"`
+	EtcdEndpoints   []string `json:"etcdEndpoints"`
+	EtcdDialTimeout int      `json:"etcdDialTimeout"`
 }
 
 var (
@@ -28,7 +30,7 @@ func InitConfig(filename string) (err error) {
 		return
 	}
 
-	//将json反序列化到config对象中
+	//将配置文件中的json反序列化到config对象中
 	if err = json.Unmarshal(content, &conf); err != nil {
 		return
 	}

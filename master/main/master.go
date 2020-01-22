@@ -5,6 +5,7 @@ import (
 	"flag"
 	"fmt"
 	"runtime"
+	"time"
 )
 
 //设置内核数
@@ -41,12 +42,20 @@ func main() {
 		goto ERR
 	}
 
+	//启动任务管理器
+	if err = master.InitJobMann(); err != nil {
+		goto ERR
+	}
+
 	//启动api http服务
 	if err = master.InitApiServer(); err != nil {
 		goto ERR
 	}
 
 	//正常退出
+	for {
+		time.Sleep(1 * time.Second)
+	}
 	return
 	//异常退出
 ERR:
