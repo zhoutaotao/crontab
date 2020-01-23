@@ -4,7 +4,9 @@ import (
 	"context"
 	"crotab/project/crontab/master/common"
 	"encoding/json"
+	"fmt"
 	"github.com/coreos/etcd/clientv3"
+	"github.com/coreos/etcd/mvcc/mvccpb"
 	"time"
 )
 
@@ -109,4 +111,36 @@ func (jobmannger *JobMannger) DeleteJob(name string) (oldJob *common.Job, err er
 		oldJob = &oldJobObj
 	}
 	return oldJob, err
+}
+
+//任务list
+func (jobmannger *JobMannger) ListJobs() (jobList []*common.Job, err error) {
+	var (
+		dirKey  string
+		getResp *clientv3.GetResponse
+		kvPair  *mvccpb.KeyValue
+		job     *common.Job
+	)
+	//任务目录
+	dirKey = common.JOB_DIR
+
+	//获取目录下的所有任务
+	if getResp, err = jobmannger.kv.Get(context.TODO(), dirKey, clientv3.WithPrevKV()); err != nil {
+		return
+	}
+
+	//初始化数组空间
+	jobList = make([]*common.Job, 0)
+
+	//遍历所有任务，进行反序列化
+	for _, kvPair = range getResp.Kvs {
+		fmt.Println(kvPair.Value)
+		job = &common.Job{}
+		if err = json.Unmarshal(kvPair.Value, job); err != nil {
+			err = nil
+			continue
+		}
+		jobList = append(jobList, job)
+	}
+	return
 }
