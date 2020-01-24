@@ -2,7 +2,7 @@ package master
 
 import (
 	"context"
-	"crotab/project/crontab/master/common"
+	"crotab/project/crontab/common"
 	"encoding/json"
 	"fmt"
 	"github.com/coreos/etcd/clientv3"
@@ -141,6 +141,33 @@ func (jobmannger *JobMannger) ListJobs() (jobList []*common.Job, err error) {
 			continue
 		}
 		jobList = append(jobList, job)
+	}
+	return
+}
+
+// 杀死任务
+func (jobmannger *JobMannger) KillJob(name string) (err error) {
+	// 更新一下key=/cron/killer/任务名
+	var (
+		killerKey      string
+		leaseGrantResp *clientv3.LeaseGrantResponse
+		leaseId        clientv3.LeaseID
+	)
+
+	// 通知worker杀死对应任务
+	killerKey = common.JOB_KILLER_DIR + name
+
+	// 让worker监听到一次put操作, 创建一个租约让其稍后自动过期即可
+	if leaseGrantResp, err = jobmannger.lease.Grant(context.TODO(), 1); err != nil {
+		return
+	}
+
+	// 租约ID
+	leaseId = leaseGrantResp.ID
+
+	// 设置killer标记
+	if _, err = jobmannger.kv.Put(context.TODO(), killerKey, "", clientv3.WithLease(leaseId)); err != nil {
+		return
 	}
 	return
 }

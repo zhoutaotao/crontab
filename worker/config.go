@@ -1,24 +1,20 @@
-package master
+package worker
 
 import (
 	"encoding/json"
 	"io/ioutil"
 )
 
-//master配置
-type Config struct {
-	ApiPort         int      `json:"apiPort"`
-	ApiReadTimeout  int      `json:"apiReadTimeout"`
-	ApiWriteTimeout int      `json:"apiWriteTimeout"`
-	EtcdEndpoints   []string `json:"etcdEndpoints"`
-	EtcdDialTimeout int      `json:"etcdDialTimeout"`
-	WebRoot         string   `json:"web_root"`
-}
-
 var (
 	//单例
 	G_config *Config
 )
+
+//worker配置
+type Config struct {
+	EtcdEndpoints   []string `json:"etcdEndpoints"`
+	EtcdDialTimeout int      `json:"etcdDialTimeout"`
+}
 
 func InitConfig(filename string) (err error) {
 	var (

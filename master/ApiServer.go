@@ -1,7 +1,7 @@
 package master
 
 import (
-	"crotab/project/crontab/master/common"
+	"crotab/project/crontab/common"
 	"encoding/json"
 	"net"
 	"net/http"
@@ -115,12 +115,48 @@ ERR:
 
 }
 
+// 强制杀死某个任务
+// POST /job/kill  name=job1
+func handleJobKill(resp http.ResponseWriter, req *http.Request) {
+	var (
+		err   error
+		name  string
+		bytes []byte
+	)
+
+	// 解析POST表单
+	if err = req.ParseForm(); err != nil {
+		goto ERR
+	}
+
+	// 要杀死的任务名
+	name = req.PostForm.Get("name")
+
+	// 杀死任务
+	if err = G_jobMannger.KillJob(name); err != nil {
+		goto ERR
+	}
+
+	// 正常应答
+	if bytes, err = common.BuildResponse(0, "success", nil); err == nil {
+		resp.Write(bytes)
+	}
+	return
+
+ERR:
+	if bytes, err = common.BuildResponse(-1, err.Error(), nil); err == nil {
+		resp.Write(bytes)
+	}
+}
+
 //初始化服务
 func InitApiServer() (err error) {
 	var (
-		mux        *http.ServeMux
-		listener   net.Listener
-		httpServer *http.Server
+		mux           *http.ServeMux
+		listener      net.Listener
+		httpServer    *http.Server
+		staticDir     http.Dir     //静态文件的根目录
+		staticHandler http.Handler //静态文件的回调handler
 	)
 	mux = http.NewServeMux()
 	//保存
@@ -129,6 +165,16 @@ func InitApiServer() (err error) {
 	mux.HandleFunc("/job/delete", handleJobDelete)
 	//列表
 	mux.HandleFunc("/job/list", handleJobList)
+	//强杀任务
+	mux.HandleFunc("/job/kill", handleJobKill)
+
+	//当请求的接口是以上则执行，如果不在上边就查找静态文件
+	//静态文件目录
+
+	staticDir = http.Dir("./webroot")
+
+	staticHandler = http.FileServer(staticDir)
+	mux.Handle("/", http.StripPrefix("/", staticHandler)) //将/过滤掉之后交给staticHandler处理
 
 	//启动tcp监听
 	if listener, err = net.Listen("tcp", ":"+strconv.Itoa(G_config.ApiPort)); err != nil {
