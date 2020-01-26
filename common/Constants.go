@@ -12,4 +12,7 @@ const (
 
 	//事件类型--删除
 	JOB_EVENT_DELETE = 2
+
+	//抢锁路径 任务锁目录
+	JOB_LOCK_DIR = "/cron/lock/"
 )
