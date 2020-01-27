@@ -47,7 +47,7 @@ func (scheduler *Scheduler) TryStartJob(jobPlan *common.JobSchedulerPlan) {
 }
 
 //计算任务调度状态
-func (scheduler *Scheduler) TryScheduler(jobSchedulePlan *common.JobSchedulerPlan) (schedulerAfter time.Duration) {
+func (scheduler *Scheduler) TryScheduler() (schedulerAfter time.Duration) {
 	var (
 		jobPlan  *common.JobSchedulerPlan // job + expr + nextTime
 		now      time.Time
@@ -130,6 +130,8 @@ func (scheduler *Scheduler) handleJobEvent(jobEvent *common.JobEvent) {
 		jobSchedulePlan *common.JobSchedulerPlan
 		err             error
 		jobExisted      bool
+		jobExecuteInfo  *common.JobExecuteInfo
+		isJobExecuting  bool
 	)
 	switch jobEvent.EventType {
 	case common.JOB_EVENT_SAVE: //保存任务事件
@@ -144,14 +146,48 @@ func (scheduler *Scheduler) handleJobEvent(jobEvent *common.JobEvent) {
 			//如果存在，则删掉
 			delete(scheduler.jobPlanTable, jobEvent.Job.Name)
 		}
+	case common.JOB_EVENT_KILLE: //强杀任务事件
+		//取消掉commond执行
+		//判断任务是否在执行
+		if jobExecuteInfo, isJobExecuting = scheduler.jobExecutingTable[jobEvent.Job.Name]; isJobExecuting {
+			//通过cancelFunc终止command执行
+			jobExecuteInfo.CancleFunc()
+		}
+
 	}
 }
 
-//
-func (scheduler *Scheduler) handleJobResult(jobResult *common.JobExecuteResult) {
+//处理执行结果
+func (scheduler *Scheduler) handleJobResult(result *common.JobExecuteResult) {
+	var (
+		jobLog *common.JobLog
+	)
 	//从执行表中删除
 	//删除执行状态
-	delete(scheduler.jobExecutingTable, jobResult.ExecuteInfo.Job.Name)
+	delete(scheduler.jobExecutingTable, result.ExecuteInfo.Job.Name)
+
+	//生成执行日志
+	//当错误原因不是锁被占用的时候的日志才会被记录
+	if result.Err != common.ERR_LOCK_ALREADY_REQUIRED {
+		jobLog = &common.JobLog{
+			JobName:      result.ExecuteInfo.Job.Name,
+			Command:      result.ExecuteInfo.Job.Command,
+			OutPut:       string(result.OutPut),
+			PlanTime:     result.ExecuteInfo.PlanTime.UnixNano() / 1000 / 1000,
+			ScheduleTime: result.ExecuteInfo.RealTime.UnixNano() / 1000 / 1000,
+			StartTime:    result.StartTime.UnixNano() / 1000 / 1000,
+			EndTime:      result.EndTime.UnixNano() / 1000 / 1000,
+		}
+		if result.Err != nil {
+			jobLog.Err = result.Err.Error()
+		} else {
+			jobLog.Err = ""
+		}
+		//todo:将日志存储的
+		//插入需要耗时，会影响任务的调度，如果调度比较慢的话，会使调度失去精度，甚至终止了调度
+		//所以将日志转发的单独的处理模块(另一个goroutine)中执行
+		G_logSink.Append(jobLog)
+	}
 }
 
 //向scheduler中推送任务变化的事件

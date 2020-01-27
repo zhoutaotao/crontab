@@ -3,6 +3,17 @@
   "etcdEndPoints": ["127.0.0.1:2379"],
 
   "etcd的连接超时": "单位：毫秒",
-  "etcdDialTimeout": 5000
+  "etcdDialTimeout": 5000,
 
+  "mongodb地址": "采用URI",
+  "mongodbUri": "127.0.0.01:27017",
+
+  "mongodb连接超时时间": "单位：毫秒",
+  "mgConnectTimeOut": 5000,
+
+  "jobLog批次数组的大小": "减少网络往返耗时，以多条的形式插入MongoDB",
+  "jobLogBatchSize": 100
+
+  "日志自动提交超时": "在日志条数不足100时，时间已到将自动提交:毫秒",
+  "jobCommitTimeout": "1000"
 }

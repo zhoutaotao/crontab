@@ -15,5 +15,11 @@
   "etcdDialTimeout": 5000,
 
   "web页面根目录": "生产环境必须为绝对路径，静态页面，前后端分离开发",
-  "webRoot": "./webroot"
+  "webRoot": "./webroot",
+
+  "mongodb地址": "采用URI",
+  "mongodbUri": "127.0.0.01:27017",
+
+  "mongodb连接超时时间": "单位：毫秒",
+  "mgConnectTimeOut": 5000
 }

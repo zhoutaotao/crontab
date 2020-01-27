@@ -1,8 +1,8 @@
 package worker
 
 import (
-	"context"
 	"crotab/project/crontab/common"
+	"math/rand"
 	"os/exec"
 	"time"
 )
@@ -38,6 +38,10 @@ func (executor *Executor) ExecuteJob(info *common.JobExecuteInfo) {
 		//记录任务的开始时间
 		result.StartTime = time.Now()
 
+		//在抢锁之前随机睡眠(0-1秒)不同的节点的时间误差在一秒之内
+		//随机之后竞争就相对均匀
+		time.Sleep(time.Duration(rand.Intn(1000)) * time.Millisecond)
+
 		//尝试上锁
 		err = jobLock.TryLock()
 		defer jobLock.Unlock()
@@ -50,7 +54,7 @@ func (executor *Executor) ExecuteJob(info *common.JobExecuteInfo) {
 			result.StartTime = time.Now()
 
 			//执行shell命令
-			cmd = exec.CommandContext(context.TODO(), "/bin/bash", "-c", info.Job.Command)
+			cmd = exec.CommandContext(info.CancelCtx, "/bin/bash", "-c", info.Job.Command)
 
 			//执行并捕获输出
 			outPut, err = cmd.CombinedOutput()
